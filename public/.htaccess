@@ -1,14 +1,32 @@
-# Fallback SPA para Apache (Plesk sirve el sitio a través de Apache).
-# Sin esto, recargar rutas de React Router (/mesa, /agentes…) da 404.
-# Vite copia el contenido de public/ a dist/ en cada build, así que este
-# fichero acaba en la raíz del sitio servido y persiste entre despliegues.
+# Configuración Apache para servir el dashboard (SPA + PWA) en Plesk.
+# Vite copia este fichero a dist/ en el build, así que se despliega solo.
+
+# --- Fallback de SPA (React Router) ---
+# Sin esto, recargar /agents, /history, etc. daría 404. Las peticiones que no
+# correspondan a un fichero/carpeta real se sirven con index.html.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  # No reescribas ficheros/carpetas que existen (assets, favicon, etc.).
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  # Todo lo demás → index.html (lo resuelve React Router en el cliente).
   RewriteRule . /index.html [L]
+</IfModule>
+
+# --- MIME del manifest PWA ---
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+<IfModule mod_headers.c>
+  # El service worker y el manifest NO deben cachearse de forma agresiva, o los
+  # clientes se quedarían con una versión antigua tras desplegar.
+  <FilesMatch "(sw\.js|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # Los assets llevan hash en el nombre: cache larga e inmutable.
+  <FilesMatch "\.(js|css|woff2?|png|jpg|jpeg|gif|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>

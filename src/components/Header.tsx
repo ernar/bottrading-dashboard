@@ -8,6 +8,25 @@ const API_URL = getApiUrl()
 interface HeaderProps {
   state: BotState | null
   connected: boolean
+  onLogout?: () => void
+}
+
+function LogoutButton({ onLogout }: { onLogout?: () => void }) {
+  if (!onLogout) return null
+  return (
+    <button
+      onClick={onLogout}
+      title="Cerrar sesión"
+      aria-label="Cerrar sesión"
+      className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-gray-800 transition"
+    >
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+      </svg>
+    </button>
+  )
 }
 
 function BotToggleButton({ running }: { running: boolean }) {
@@ -39,7 +58,17 @@ function BotToggleButton({ running }: { running: boolean }) {
   )
 }
 
-export function Header({ state, connected }: HeaderProps) {
+// Tarjeta de métrica de la cabecera.
+function Stat({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
+  return (
+    <div className="bg-gray-800/60 ring-1 ring-gray-700/50 rounded-xl px-3 py-2.5 hover:ring-gray-600/70 transition">
+      <div className="text-[11px] uppercase tracking-wider text-gray-400">{label}</div>
+      <div className={`text-lg sm:text-xl font-semibold ${valueClass}`}>{value}</div>
+    </div>
+  )
+}
+
+export function Header({ state, connected, onLogout }: HeaderProps) {
   // Momento de la última actualización RECIBIDA, medido con el reloj del
   // navegador (no con el timestamp del backend, que puede traer desfase de zona
   // horaria y solo cambia en el state_update completo). `state` cambia de
@@ -52,13 +81,16 @@ export function Header({ state, connected }: HeaderProps) {
 
   if (!state || !state.account_info) {
     return (
-      <header className="bg-gray-900 text-white p-4 border-b border-gray-700">
+      <header className="bg-gradient-to-b from-gray-900 to-gray-950 text-white px-4 py-3 border-b border-gray-800 shadow-lg shadow-black/30">
         <div className="flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="GamerFurious Trading Bot" className="h-10 w-auto" />
-            <h1 className="text-xl sm:text-2xl font-bold">Trading Bot</h1>
+            <img src="/logo.png" alt="GamerFurious Trading Bot" className="h-10 w-10 rounded-lg ring-1 ring-gray-700 bg-gray-800/50 object-contain p-1" />
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">Trading Bot</h1>
           </div>
-          <StatusBadge status={connected ? 'connected' : 'disconnected'} label="API" />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={connected ? 'connected' : 'disconnected'} label="API" />
+            <LogoutButton onLogout={onLogout} />
+          </div>
         </div>
       </header>
     )
@@ -71,51 +103,41 @@ export function Header({ state, connected }: HeaderProps) {
   const platform = account.platform || 'MT4'
 
   return (
-    <header className="bg-gray-900 text-white p-4 border-b border-gray-700">
+    <header className="bg-gradient-to-b from-gray-900 to-gray-950 text-white px-4 py-3 sm:py-4 border-b border-gray-800 shadow-lg shadow-black/30">
       <div className="flex flex-wrap justify-between items-center gap-y-2 mb-4">
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="GamerFurious Trading Bot" className="h-11 w-auto" />
-          <h1 className="text-xl sm:text-2xl font-bold">{platform} Trading Bot</h1>
-          {lastSeen && (
-            <span className="text-xs text-gray-500 hidden sm:inline">
-              actualizado {lastSeen.toLocaleTimeString()}
-            </span>
-          )}
+        <div className="flex items-center gap-3 min-w-0">
+          <img src="/logo.png" alt="GamerFurious Trading Bot" className="h-11 w-11 rounded-xl ring-1 ring-gray-700 bg-gray-800/50 object-contain p-1" />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold leading-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent truncate">
+              {platform} Trading Bot
+            </h1>
+            {lastSeen && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-500">
+                <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}`} />
+                actualizado {lastSeen.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <StatusBadge status={connected ? 'connected' : 'disconnected'} label="API" />
           <StatusBadge status={state.bot_running ? 'bullish' : 'bearish'} label={state.bot_running ? 'Running' : 'Stopped'} />
           <BotToggleButton running={state.bot_running} />
+          <LogoutButton onLogout={onLogout} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 text-sm">
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">Balance</div>
-          <div className="text-lg sm:text-xl font-semibold">${account.balance.toFixed(2)}</div>
-        </div>
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">Equity</div>
-          <div className="text-lg sm:text-xl font-semibold">${account.equity.toFixed(2)}</div>
-        </div>
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">P/L flotante</div>
-          <div className={`text-lg sm:text-xl font-semibold ${pnlColor}`}>
-            {floatingPnl >= 0 ? '+' : ''}${floatingPnl.toFixed(2)}
-          </div>
-        </div>
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">Free Margin</div>
-          <div className="text-lg sm:text-xl font-semibold">${account.free_margin.toFixed(2)}</div>
-        </div>
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">Posiciones</div>
-          <div className="text-lg sm:text-xl font-semibold">{openPositions}</div>
-        </div>
-        <div className="bg-gray-800 p-3 rounded">
-          <div className="text-gray-400">Leverage</div>
-          <div className="text-lg sm:text-xl font-semibold">{account.leverage}:1</div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3 text-sm">
+        <Stat label="Balance" value={`$${account.balance.toFixed(2)}`} />
+        <Stat label="Equity" value={`$${account.equity.toFixed(2)}`} />
+        <Stat
+          label="P/L flotante"
+          value={`${floatingPnl >= 0 ? '+' : ''}$${floatingPnl.toFixed(2)}`}
+          valueClass={pnlColor}
+        />
+        <Stat label="Free Margin" value={`$${account.free_margin.toFixed(2)}`} />
+        <Stat label="Posiciones" value={String(openPositions)} />
+        <Stat label="Leverage" value={`${account.leverage}:1`} />
       </div>
     </header>
   )

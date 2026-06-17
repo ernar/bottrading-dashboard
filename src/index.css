@@ -21,6 +21,16 @@ code {
     monospace;
 }
 
+/* Permite scroll horizontal (cuando hace falta) sin mostrar la barra: no pega
+   con la UX del dashboard. WebKit + Firefox + IE/Edge antiguos. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Animación de apertura del panel de chat: surge desde la burbuja (abajo-dcha)
    con un pequeño "pop" (fade + slide + scale). */
 @keyframes chat-pop {

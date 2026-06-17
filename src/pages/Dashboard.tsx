@@ -117,8 +117,11 @@ export function DashboardPage({ state }: DashboardPageProps) {
 
   return (
     <div className="p-4 sm:p-8 space-y-8">
-      {/* Perfil de riesgo + horizonte: visibles y editables desde el dashboard */}
-      <TradingProfiles />
+      {/* Perfil de riesgo + horizonte: visibles y editables desde el dashboard.
+          Oculto en móvil para aligerar la vista. */}
+      <div className="hidden sm:block">
+        <TradingProfiles />
+      </div>
 
       <section>
         <div className="flex items-center justify-between mb-4">
@@ -157,7 +160,8 @@ export function DashboardPage({ state }: DashboardPageProps) {
 
       <NewsTicker />
 
-      <section>
+      {/* Resumen de estadísticas: oculto en móvil. */}
+      <section className="hidden sm:block">
         <h2 className="text-xl font-bold mb-4">Resumen</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard title="Señales hoy" value={String(stats?.signals_today ?? '—')} sub={`${stats?.signals_total ?? 0} en total`} />

@@ -172,6 +172,33 @@ su URL pública. **No subas el código fuente al servidor**, solo el build (`dis
 > estáticos una vez compilada. El soporte Node solo sería útil si quisieras ejecutar el `build`
 > en el propio servidor; aun así, el artefacto final que se sirve sigue siendo `dist/`.
 
+### Despliegue automático (GitHub Actions → Plesk por FTPS)
+
+El repo incluye un workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) que,
+en **cada push a `main`**, compila y sube el contenido de `dist/` a Plesk por **FTPS**
+(sincronización incremental). El `.htaccess` de SPA + PWA va dentro del build
+([`public/.htaccess`](public/.htaccess)), así que no hay que tocar nada en el servidor.
+
+**Configura una vez** en GitHub → *Settings* → *Secrets and variables* → *Actions*:
+
+| Tipo | Nombre | Valor |
+|---|---|---|
+| Secret | `FTP_SERVER` | Host FTP del dominio (p. ej. `ftp.tudominio.com`). |
+| Secret | `FTP_USERNAME` | Usuario FTP (el de la suscripción/dominio en Plesk). |
+| Secret | `FTP_PASSWORD` | Contraseña FTP. |
+| Secret | `VITE_AUTH_PASS` | Contraseña del login del dashboard. |
+| Secret | `VITE_API_TOKEN` | (Opcional) Token del backend, si lo usa. |
+| Variable | `VITE_API_URL` | (Opcional) URL pública del backend. Si se omite, fíjala en *Ajustes*. |
+| Variable | `VITE_AUTH_USER` | Usuario del login del dashboard. |
+| Variable | `FTP_SERVER_DIR` | (Opcional) Carpeta destino. Default `/httpdocs/`. |
+| Variable | `FTP_PORT` | (Opcional) Puerto FTPS. Default `21`. |
+
+> Las credenciales del login (`VITE_AUTH_*`) y el token se incrustan en el bundle al compilar;
+> guardarlas como secret/variable solo evita que queden en el repo y en los logs. Recuerda que,
+> al ser una SPA, el login es una puerta de acceso, no seguridad real (ver `src/auth.ts`).
+
+Para lanzarlo a mano sin esperar a un push: pestaña **Actions** → *Deploy* → *Run workflow*.
+
 ### Type-check sin compilar
 
 ```bash

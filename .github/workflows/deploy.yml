@@ -1,0 +1,58 @@
+name: Deploy
+
+# Despliegue automático del dashboard a Plesk por FTPS.
+# Cada push a main: compila (npm run build) y sube el contenido de dist/.
+# También se puede lanzar a mano desde la pestaña Actions (workflow_dispatch).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Evita despliegues solapados si se empujan varios commits seguidos.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      # Las VITE_* se incrustan en tiempo de build. Se leen de
+      # Settings → Secrets and variables → Actions del repo.
+      # - Secrets (cifrados): VITE_AUTH_PASS, VITE_API_TOKEN
+      # - Variables (texto):  VITE_API_URL, VITE_AUTH_USER
+      # Si las dejas vacías: el login se desactiva y la URL del backend cae al
+      # default (se puede fijar luego desde la pestaña Ajustes del dashboard).
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
+          VITE_AUTH_USER: ${{ vars.VITE_AUTH_USER }}
+          VITE_AUTH_PASS: ${{ secrets.VITE_AUTH_PASS }}
+
+      # Sube SOLO el build (dist/) por FTPS. Sincronización incremental: la
+      # acción guarda un estado en el servidor y en envíos posteriores solo
+      # transfiere lo que cambió.
+      - name: Deploy to Plesk (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: ${{ vars.FTP_PORT || '21' }}
+          local-dir: ./dist/
+          server-dir: ${{ vars.FTP_SERVER_DIR || '/httpdocs/' }}
