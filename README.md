@@ -6,25 +6,27 @@ agentes, mesa de dirección (coordinador), gráficos, posiciones, historial y la
 en tiempo real, e incluye un **asistente** (chatbot) para consultar el estado y dejar notas de
 dirección a la mesa.
 
-> Este README cubre **solo el frontend**. Para el backend, los agentes y la configuración
-> global del bot, ver el [README de la raíz](../README.md).
+> Este repo contiene **solo el frontend** (dashboard), separado para desplegarlo y mantenerlo
+> de forma independiente. El backend (Flask + agentes + bridge MT4/MT5) vive en su propio repo:
+> [ernar/BotTrading](https://github.com/ernar/BotTrading).
 
 ## Requisitos
 
 - **Node.js 18+** y **npm** (incluido con Node).
-- El **backend corriendo** (`python main.py` desde la raíz). Sin él, el dashboard arranca
-  pero no recibe datos ("Failed to fetch" / "No se pudo conectar").
+- El **backend corriendo y accesible** (repo [ernar/BotTrading](https://github.com/ernar/BotTrading),
+  `python main.py`, puerto `5000`). Sin él, el dashboard arranca pero no recibe datos
+  ("Failed to fetch" / "No se pudo conectar").
 
 ## Instalación
 
-Desde la carpeta `frontend/`:
+Desde la raíz del repo:
 
 ```bash
 npm install
 ```
 
 Esto instala las dependencias declaradas en `package.json` (React 18, React Router,
-socket.io-client, axios, zustand, TanStack Table; Vite + Tailwind como dev deps).
+socket.io-client, axios; Vite + Tailwind como dev deps).
 
 ## Configuración
 
@@ -55,7 +57,7 @@ cp .env.example .env
 | Variable | Descripción |
 |---|---|
 | `VITE_API_URL` | URL del backend (Flask + WebSocket). Default `http://localhost:5000`. |
-| `VITE_API_TOKEN` | Debe coincidir con `API_TOKEN` del `.env` de la raíz. Déjalo vacío si el backend no usa token (uso local). |
+| `VITE_API_TOKEN` | Debe coincidir con `API_TOKEN` del `.env` del backend. Déjalo vacío si el backend no usa token (uso local). |
 
 > Las variables `VITE_*` se inyectan **en tiempo de build**: si las cambias, reinicia
 > `npm run dev` o vuelve a `npm run build`. El override guardado desde la UI no requiere
@@ -85,20 +87,24 @@ npm run preview   # sirve el build de dist/ para verificarlo
 
 El resultado queda en `dist/` (gitignored). Sírvelo con cualquier servidor estático.
 
-### Despliegue en Plesk
+### Despliegue (servidor estático / nginx)
 
-El dashboard es una **SPA estática**: Plesk solo tiene que servir el contenido de `dist/`.
-El backend (Flask, `python main.py`) corre aparte (en la misma VPS o en otra máquina) y el
-frontend lo alcanza por su URL pública. **No subas el código fuente al hosting**, solo el build.
+El dashboard es una **SPA estática**: el servidor solo tiene que servir el contenido de `dist/`
+con *fallback* a `index.html`. El backend (repo [ernar/BotTrading](https://github.com/ernar/BotTrading),
+`python main.py`) corre aparte (en la misma VPS o en otra máquina) y el frontend lo alcanza por
+su URL pública. **No subas el código fuente al servidor**, solo el build (`dist/`).
+
+> Hay un ejemplo listo para usar en [`deploy/nginx.conf`](deploy/nginx.conf) (server block con
+> *fallback* SPA y el proxy opcional de `/api` + `/socket.io` hacia el backend).
 
 1. **Compila apuntando al backend público.** El build inyecta `VITE_*` en tiempo de
    compilación (ver [Configuración](#configuración)), así que define la URL real **antes** de
-   `npm run build`. En tu equipo, desde `frontend/`:
+   `npm run build`. En tu equipo, desde la raíz del repo:
 
    ```bash
-   # crea frontend/.env con la URL pública del backend
+   # crea .env con la URL pública del backend
    #   VITE_API_URL=https://api.tudominio.com
-   #   VITE_API_TOKEN=<mismo valor que API_TOKEN del .env de la raíz>
+   #   VITE_API_TOKEN=<mismo valor que API_TOKEN del .env del backend>
    npm install
    npm run build
    ```
@@ -175,7 +181,7 @@ npx tsc --noEmit
 ## Estructura
 
 ```
-frontend/
+.
 ├── index.html              # Punto de entrada HTML (monta /src/main.tsx)
 ├── src/
 │   ├── main.tsx            # Bootstrap de React
@@ -194,6 +200,7 @@ frontend/
 ├── vite.config.ts          # Puerto 3000 + proxy /api → :5000
 ├── tailwind.config.js
 ├── tsconfig.json
+├── deploy/nginx.conf       # Ejemplo de server block (SPA + proxy opcional al backend)
 └── .env.example            # Plantilla de VITE_API_URL / VITE_API_TOKEN
 ```
 
@@ -218,8 +225,7 @@ frontend/
 - **Vite 5** (dev server y build)
 - **Tailwind CSS 3**
 - **React Router 6**
-- **socket.io-client** (WebSocket) · **axios** (HTTP) · **zustand** (estado) ·
-  **@tanstack/react-table** (tablas)
+- **socket.io-client** (WebSocket) · **axios** (HTTP)
 
 ## Troubleshooting
 
@@ -232,7 +238,7 @@ frontend/
 
 **`401 unauthorized`**
 - El backend tiene `API_TOKEN` pero el dashboard no lo envía. Define `VITE_API_TOKEN` (mismo
-  valor) en `frontend/.env` o ponlo en **Ajustes**.
+  valor) en `.env` o ponlo en **Ajustes**.
 
 **Túnel ngrok ("Failed to fetch" con una URL `*.ngrok-free.dev`)**
 - Los túneles gratuitos de ngrok muestran una página intersticial; `fetch`/WebSocket reciben
