@@ -172,26 +172,35 @@ su URL pública. **No subas el código fuente al servidor**, solo el build (`dis
 > estáticos una vez compilada. El soporte Node solo sería útil si quisieras ejecutar el `build`
 > en el propio servidor; aun así, el artefacto final que se sirve sigue siendo `dist/`.
 
-### Despliegue automático (GitHub Actions → Plesk por FTPS)
+### Despliegue automático (GitHub Actions → Plesk por SFTP)
 
 El repo incluye un workflow ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)) que,
-en **cada push a `main`**, compila y sube el contenido de `dist/` a Plesk por **FTPS**
-(sincronización incremental). El `.htaccess` de SPA + PWA va dentro del build
-([`public/.htaccess`](public/.htaccess)), así que no hay que tocar nada en el servidor.
+en **cada push a `main`**, compila y sube el contenido de `dist/` a Plesk por **SFTP** (SSH,
+puerto 22) con `lftp` (sube solo lo que cambió, dotfiles incluidos). El `.htaccess` de SPA + PWA
+va dentro del build ([`public/.htaccess`](public/.htaccess)), así que no hay que tocar nada más
+en el servidor.
+
+> **Por qué SFTP y no FTP/FTPS:** FTPS usa una conexión de datos en modo pasivo a un puerto alto
+> aleatorio que el firewall del hosting suele bloquear (y al ir el control cifrado, no puede
+> abrirlo solo). SFTP va todo por una única conexión en el 22 y evita ese problema.
+
+**Requisito en Plesk:** habilita el acceso SSH del usuario en *Suscripción* → *Acceso al hosting
+web* → **Acceso al servidor por SSH** (cualquier shell, incl. el chroot de solo-SFTP). El SFTP usa
+ese usuario del sistema y su contraseña.
 
 **Configura una vez** en GitHub → *Settings* → *Secrets and variables* → *Actions*:
 
 | Tipo | Nombre | Valor |
 |---|---|---|
-| Secret | `FTP_SERVER` | Host FTP del dominio (p. ej. `ftp.tudominio.com`). |
-| Secret | `FTP_USERNAME` | Usuario FTP (el de la suscripción/dominio en Plesk). |
-| Secret | `FTP_PASSWORD` | Contraseña FTP. |
+| Secret | `FTP_SERVER` | Host SSH/SFTP (p. ej. `tudominio.com` o la IP del servidor). |
+| Secret | `FTP_USERNAME` | Usuario del sistema con acceso SSH (el de la suscripción en Plesk). |
+| Secret | `FTP_PASSWORD` | Contraseña de ese usuario. |
 | Secret | `VITE_AUTH_PASS` | Contraseña del login del dashboard. |
 | Secret | `VITE_API_TOKEN` | (Opcional) Token del backend, si lo usa. |
 | Variable | `VITE_API_URL` | (Opcional) URL pública del backend. Si se omite, fíjala en *Ajustes*. |
 | Variable | `VITE_AUTH_USER` | Usuario del login del dashboard. |
 | Variable | `FTP_SERVER_DIR` | (Opcional) Carpeta destino. Default `/httpdocs/`. |
-| Variable | `FTP_PORT` | (Opcional) Puerto FTPS. Default `21`. |
+| Variable | `FTP_PORT` | (Opcional) Puerto SFTP. Default `22`. |
 
 > Las credenciales del login (`VITE_AUTH_*`) y el token se incrustan en el bundle al compilar;
 > guardarlas como secret/variable solo evita que queden en el repo y en los logs. Recuerda que,

@@ -1,6 +1,6 @@
 name: Deploy
 
-# Despliegue automático del dashboard a Plesk por FTPS.
+# Despliegue automático del dashboard a Plesk por SFTP (SSH, puerto 22).
 # Cada push a main: compila (npm run build) y sube el contenido de dist/.
 # También se puede lanzar a mano desde la pestaña Actions (workflow_dispatch).
 on:
@@ -43,16 +43,26 @@ jobs:
           VITE_AUTH_USER: ${{ vars.VITE_AUTH_USER }}
           VITE_AUTH_PASS: ${{ secrets.VITE_AUTH_PASS }}
 
-      # Sube SOLO el build (dist/) por FTPS. Sincronización incremental: la
-      # acción guarda un estado en el servidor y en envíos posteriores solo
-      # transfiere lo que cambió.
-      - name: Deploy to Plesk (FTPS)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: ${{ vars.FTP_PORT || '21' }}
-          local-dir: ./dist/
-          server-dir: ${{ vars.FTP_SERVER_DIR || '/httpdocs/' }}
+      # Sube SOLO el build (dist/) por SFTP con lftp (incluye dotfiles como
+      # .htaccess y sube solo lo que cambió). Una sola conexión por el puerto 22:
+      # sin los problemas de puertos pasivos de FTP/FTPS.
+      # Requiere que el usuario tenga acceso SSH/SFTP habilitado en Plesk
+      # (Suscripción → Acceso al hosting web → "Acceso al servidor por SSH").
+      - name: Deploy to Plesk (SFTP)
+        env:
+          SFTP_HOST: ${{ secrets.FTP_SERVER }}
+          SFTP_USER: ${{ secrets.FTP_USERNAME }}
+          SFTP_PASS: ${{ secrets.FTP_PASSWORD }}
+          SFTP_PORT: ${{ vars.FTP_PORT || '22' }}
+          REMOTE_DIR: ${{ vars.FTP_SERVER_DIR || '/httpdocs/' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lftp
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            set net:reconnect-interval-base 5;
+            open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST;
+            mirror -R --verbose --ignore-time --exclude '\.ftp-deploy-sync-state\.json' ./dist/ '$REMOTE_DIR';
+          "
