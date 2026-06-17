@@ -48,18 +48,23 @@ jobs:
       # sin los problemas de puertos pasivos de FTP/FTPS.
       # Requiere que el usuario tenga acceso SSH/SFTP habilitado en Plesk
       # (Suscripción → Acceso al hosting web → "Acceso al servidor por SSH").
-      - name: DIAGNOSTIC - map remote filesystem (no upload)
+      - name: Deploy to Plesk (SFTP)
         env:
           SFTP_HOST: ${{ secrets.FTP_SERVER }}
           SFTP_USER: ${{ secrets.FTP_USERNAME }}
           SFTP_PASS: ${{ secrets.FTP_PASSWORD }}
           SFTP_PORT: ${{ vars.FTP_PORT || '22' }}
+          # Docroot de bot.blankpage.es dentro del chroot del usuario SFTP
+          # (hermano de /httpdocs, que es el del dominio principal).
+          REMOTE_DIR: ${{ vars.FTP_SERVER_DIR || '/bot.blankpage.es/' }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq lftp
-          echo "=== TOP LEVEL (/) ==="
-          lftp -c "set sftp:auto-confirm yes; open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST; cls -la /"
-          echo "=== /httpdocs ==="
-          lftp -c "set sftp:auto-confirm yes; open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST; cls -la /httpdocs/" || true
-          echo "=== ALL index.html in chroot ==="
-          lftp -c "set sftp:auto-confirm yes; open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST; find /" 2>/dev/null | grep -i "index.html" || echo "(none found / find not permitted)"
+          lftp -c "
+            set sftp:auto-confirm yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            set net:reconnect-interval-base 5;
+            open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST;
+            mirror -R --verbose --ignore-time --exclude '\.ftp-deploy-sync-state\.json' ./dist/ '$REMOTE_DIR';
+          "
