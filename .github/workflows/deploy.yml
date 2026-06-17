@@ -66,5 +66,5 @@ jobs:
             set net:max-retries 2;
             set net:reconnect-interval-base 5;
             open -p $SFTP_PORT -u '$SFTP_USER','$SFTP_PASS' sftp://$SFTP_HOST;
-            mirror -R --verbose --ignore-time --exclude '\.ftp-deploy-sync-state\.json' ./dist/ '$REMOTE_DIR';
+            mirror -R --verbose --exclude '\.ftp-deploy-sync-state\.json' ./dist/ '$REMOTE_DIR';
           "
