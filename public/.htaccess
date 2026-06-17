@@ -1,0 +1,14 @@
+# Fallback SPA para Apache (Plesk sirve el sitio a través de Apache).
+# Sin esto, recargar rutas de React Router (/mesa, /agentes…) da 404.
+# Vite copia el contenido de public/ a dist/ en cada build, así que este
+# fichero acaba en la raíz del sitio servido y persiste entre despliegues.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  # No reescribas ficheros/carpetas que existen (assets, favicon, etc.).
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  # Todo lo demás → index.html (lo resuelve React Router en el cliente).
+  RewriteRule . /index.html [L]
+</IfModule>
