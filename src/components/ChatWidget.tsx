@@ -50,6 +50,10 @@ export function ChatWidget() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [info, setInfo] = useState<AssistantInfo | null>(null)
+  // Catálogo de proveedores con API key configurada (mismo /api/models que usan
+  // agentes, mesa y el selector de Ajustes). Es la fuente de verdad de "hay
+  // clave"; el flag `available` de /api/assistant/info da falsos negativos.
+  const [models, setModels] = useState<Record<string, string[]>>({})
   const sessionId = useRef(getSessionId())
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -71,6 +75,8 @@ export function ChatWidget() {
     loaded.current = true
     fetch(`${API_URL}/api/assistant/info`, { headers: getApiHeaders() })
       .then(r => r.json()).then(setInfo).catch(() => {})
+    fetch(`${API_URL}/api/models`, { headers: getApiHeaders() })
+      .then(r => r.json()).then(setModels).catch(() => {})
     fetch(`${API_URL}/api/assistant/history?session_id=${sessionId.current}`, { headers: getApiHeaders() })
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.history) && d.history.length) setMessages(d.history) })
@@ -158,6 +164,14 @@ export function ChatWidget() {
       .finally(() => setBusy(false))
   }, [busy, reset, requestClose])
 
+  // "Hay clave" para el proveedor del asistente. Fuente de verdad: el catálogo
+  // /api/models (solo lista proveedores con API key). El flag `available` de
+  // /api/assistant/info da falsos negativos, así que lo combinamos por si acaso.
+  const assistantHasKey = !!info && (
+    info.available ||
+    Object.keys(models).some(p => p.toLowerCase() === info.provider.toLowerCase())
+  )
+
   return (
     <>
       {/* Botón burbuja */}
@@ -181,9 +195,9 @@ export function ChatWidget() {
               {info && (
                 <div className="text-[10px] text-gray-500">
                   {info.provider.toUpperCase()}/{info.model}{' '}
-                  {info.available
+                  {assistantHasKey
                     ? <span className="text-green-400">●</span>
-                    : <span className="text-red-400" title="Falta la API key en Ajustes">● sin clave</span>}
+                    : <span className="text-red-400" title="Falta la API key del proveedor en el .env del backend">● sin clave</span>}
                 </div>
               )}
             </div>
@@ -195,9 +209,10 @@ export function ChatWidget() {
             </div>
           </div>
 
-          {info && !info.available && (
+          {info && !assistantHasKey && (
             <div className="bg-yellow-900/40 border-b border-yellow-700 text-yellow-200 text-xs px-3 py-2">
-              Configura el token en <span className="font-semibold">Ajustes → Asistente</span>.
+              Falta la API key de <span className="font-semibold">{info.provider.toUpperCase()}</span> en el{' '}
+              <span className="font-semibold">.env</span> del backend.
             </div>
           )}
 

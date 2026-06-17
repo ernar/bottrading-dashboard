@@ -39,6 +39,19 @@ const CONN = '__conn__' // pestaña de conexión del dashboard (no es un grupo d
 // Claves del modelo del asistente que el selector sustituye (no se muestran como texto).
 const ASSISTANT_MODEL_KEYS = ['ASSISTANT_PROVIDER', 'ASSISTANT_MODEL']
 
+// Grupo sintético (solo en el frontend) para las claves de proveedor: las API
+// keys y los ajustes globales de modelo (DeepSeek). Se sacan del grupo
+// "Asistente" para que ahí quede únicamente el selector de modelo, igual que al
+// cambiar el modelo de un agente, sin tener que tocar APIs.
+const PROVIDERS_GROUP = 'Proveedores IA'
+const PROVIDER_TUNING_KEYS = new Set([
+  'DEEPSEEK_MODEL', 'DEEPSEEK_THINKING', 'DEEPSEEK_REASONING_EFFORT',
+])
+const isProviderKey = (key: string) =>
+  key.endsWith('_API_KEY') || PROVIDER_TUNING_KEYS.has(key)
+const effectiveGroup = (e: SettingEntry) =>
+  isProviderKey(e.key) ? PROVIDERS_GROUP : e.group
+
 export function BotSettings() {
   const [entries, setEntries] = useState<SettingEntry[]>([])
   const [original, setOriginal] = useState<Record<string, Val>>({})
@@ -60,7 +73,9 @@ export function BotSettings() {
         return r.json()
       })
       .then((data: { settings: SettingEntry[] }) => {
-        const list = data.settings || []
+        // Reasignamos el grupo de las claves de proveedor a "Proveedores IA"
+        // (ver effectiveGroup); el resto del componente trabaja con e.group.
+        const list = (data.settings || []).map(e => ({ ...e, group: effectiveGroup(e) }))
         setEntries(list)
         // Valor inicial editable: el actual (no secretos); los secretos vacíos.
         const init: Record<string, Val> = {}
@@ -366,7 +381,7 @@ function AssistantModelSelect({
         className="w-full max-w-md mt-1 px-3 py-2 rounded bg-gray-900 border border-gray-600 text-white text-sm
                    focus:outline-none focus:border-blue-500"
       >
-        {options.length === 0 && <option value="">(sin proveedores: configura una API key abajo)</option>}
+        {options.length === 0 && <option value="">(sin proveedores: configura una API key en «Proveedores IA»)</option>}
         {current === '' && options.length > 0 && <option value="">— elige modelo —</option>}
         {options.map(opt => (
           <option key={opt} value={opt}>{opt.toUpperCase()}</option>
@@ -374,7 +389,8 @@ function AssistantModelSelect({
       </select>
       <p className="text-xs text-gray-500 mt-0.5">
         Igual que el selector de agentes y mesa: solo aparecen los proveedores con su API key ya
-        configurada (abajo). La clave se coge del <code>.env</code>; no hace falta reescribirla.
+        configurada (pestaña «Proveedores IA»). La clave se coge del <code>.env</code>; no hace
+        falta reescribirla.
       </p>
     </div>
   )
