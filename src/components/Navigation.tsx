@@ -68,8 +68,9 @@ export function Navigation() {
 
   return (
     <nav className="bg-gray-800 border-b border-gray-700">
-      {/* Solo iconos para ahorrar espacio. Reparto uniforme; si en una pantalla
-          muy estrecha no caben, hace scroll horizontal SIN barra visible. */}
+      {/* En móvil solo iconos para ahorrar espacio; en desktop (sm+) se muestra
+          el nombre de la sección junto al icono. Reparto uniforme; si en una
+          pantalla muy estrecha no caben, hace scroll horizontal SIN barra. */}
       <div className="flex justify-around sm:justify-start gap-1 sm:gap-2 px-1 sm:px-4 overflow-x-auto no-scrollbar">
         {LINKS.map(({ to, label, icon: IconCmp }) => {
           const active = location.pathname === to
@@ -80,13 +81,14 @@ export function Navigation() {
               title={label}
               aria-label={label}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center justify-center px-4 py-3 shrink-0 transition border-b-2 ${
+              className={`flex items-center justify-center gap-2 px-4 py-3 shrink-0 transition border-b-2 ${
                 active
                   ? 'border-blue-500 text-white'
                   : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-700'
               }`}
             >
               <IconCmp className="w-5 h-5 shrink-0" />
+              <span className="hidden sm:inline text-sm font-medium">{label}</span>
             </Link>
           )
         })}

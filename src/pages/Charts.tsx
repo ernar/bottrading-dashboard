@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { BotState, Candle, DbSignal, SignalMarker, Position } from '../types/bot'
 import { CandlestickChart } from '../components/CandlestickChart'
+import { MarketWatch } from '../components/MarketWatch'
 import { useApi } from '../hooks/useApi'
 import { getApiUrl, getApiHeaders } from '../config'
 
@@ -122,42 +123,38 @@ export function ChartsPage({ state }: ChartsPageProps) {
         </div>
       </div>
 
-      {/* Selector de símbolo */}
-      <div className="flex gap-1 overflow-x-auto whitespace-nowrap">
-        {symbols.length === 0 && (
-          <span className="text-gray-500 text-sm">No hay símbolos disponibles.</span>
-        )}
-        {symbols.map(s => (
-          <button
-            key={s}
-            onClick={() => setSymbol(s)}
-            className={`px-3 py-1.5 text-sm rounded shrink-0 transition-colors ${
-              s === symbol
-                ? 'bg-blue-500/20 text-blue-400 font-semibold'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      {symbol && (
-        <CandlestickChart
-          candles={candles}
-          symbol={symbol}
-          signals={markers}
-          positions={positions}
-          showSignals={showSignals}
-          showPosition={showPosition}
+      {/* Market Watch (selector de símbolo) + gráfico del símbolo activo */}
+      <div className="grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-4 lg:gap-6 items-start">
+        <MarketWatch
+          symbols={symbols}
+          selected={symbol}
+          onSelect={setSymbol}
+          state={state}
         />
-      )}
 
-      <p className="text-xs text-gray-600">
-        Velas H1 del bróker. ▲ verde = señal de compra · ▼ rojo = señal de venta (en su
-        precio de entrada). Líneas discontinuas: entrada, SL y TP de cada posición abierta.
-        Zoom con la rueda del ratón (o los botones +/−), arrastra para desplazar y ⤢ para ver todo.
-      </p>
+        <div className="space-y-4 min-w-0">
+          {symbol ? (
+            <CandlestickChart
+              candles={candles}
+              symbol={symbol}
+              signals={markers}
+              positions={positions}
+              showSignals={showSignals}
+              showPosition={showPosition}
+            />
+          ) : (
+            <div className="bg-gray-900 rounded-lg border border-gray-700 h-[420px] flex items-center justify-center text-gray-600 text-sm">
+              Selecciona un símbolo en el Market Watch.
+            </div>
+          )}
+
+          <p className="text-xs text-gray-600">
+            Velas H1 del bróker. ▲ verde = señal de compra · ▼ rojo = señal de venta (en su
+            precio de entrada). Líneas discontinuas: entrada, SL y TP de cada posición abierta.
+            Zoom con la rueda del ratón (o los botones +/−), arrastra para desplazar y ⤢ para ver todo.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
