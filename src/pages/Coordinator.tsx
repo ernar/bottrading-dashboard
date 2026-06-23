@@ -118,14 +118,25 @@ export function CoordinatorPage({ liveCoordination }: { liveCoordination: Coordi
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
-          <span>Director LLM:</span>
-          <DirectorModelSelector
-            provider={overview?.provider}
-            model={overview?.model}
-            models={models}
-            disabled={busy}
-            onChange={changeDirectorModel}
-          />
+          {overview?.mode === 'deterministic' ? (
+            <span
+              className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 font-semibold"
+              title="La mesa decide con reglas y topes deterministas (RiskBook + guardias), sin gastar LLM"
+            >
+              Mesa determinista (sin LLM)
+            </span>
+          ) : (
+            <>
+              <span>Director LLM:</span>
+              <DirectorModelSelector
+                provider={overview?.provider}
+                model={overview?.model}
+                models={models}
+                disabled={busy}
+                onChange={changeDirectorModel}
+              />
+            </>
+          )}
           <span>· cierre automático: {overview?.can_close ? 'activado' : 'desactivado'}</span>
           <span>· cobertura (hedge): {snap?.hedging ? <span className="text-gray-300">disponible</span> : <span className="text-gray-400">no disponible</span>}</span>
           <span>{overview?.last_coordination_at ? `· última: ${overview.last_coordination_at}` : '· aún sin coordinar'}</span>
@@ -285,7 +296,9 @@ function FlowDiagram({
           accent="text-emerald-300"
           lines={[
             'RiskBook · snapshot (equity/exposición)',
-            `Director LLM · ${overview?.provider?.toUpperCase() || '—'}/${overview?.model || '—'}`,
+            overview?.mode === 'deterministic'
+              ? 'Mesa determinista · reglas (sin LLM)'
+              : `Director LLM · ${overview?.provider?.toUpperCase() || '—'}/${overview?.model || '—'}`,
             'Topes duros · clamp (exposición/reversión)',
           ]}
           highlight

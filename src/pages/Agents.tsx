@@ -271,21 +271,33 @@ export function AgentsPage() {
                   <td className="px-3 py-2 font-bold text-cyan-300 whitespace-nowrap" title={a.description}>{a.name}</td>
                   <td className="px-3 py-2 font-mono text-gray-300 whitespace-nowrap">{a.symbol}</td>
                   <td className="px-3 py-2 min-w-[180px]">
-                    <ModelSelector
-                      provider={a.provider}
-                      model={a.model}
-                      models={models}
+                    <SignalSelector
+                      mode={a.params.signal_mode}
+                      timeframe={a.params.timeframe}
                       disabled={busy}
-                      onChange={(p, m) => changeModel(a.name, p, m)}
+                      onModeChange={(m) => changeParams(a.name, { signal_mode: m })}
+                      onTimeframeChange={(tf) => changeParams(a.name, { timeframe: tf })}
                     />
-                    {a.model?.startsWith('deepseek-v4') && (
-                      <ThinkingSelector
-                        thinking={a.params.thinking}
-                        effort={a.params.reasoning_effort}
-                        disabled={busy}
-                        onChange={(thinking, reasoning_effort) =>
-                          changeParams(a.name, { thinking, reasoning_effort })}
-                      />
+                    {/* Determinista no usa LLM: se oculta el selector de modelo. */}
+                    {a.params.signal_mode !== 'deterministic' && (
+                      <>
+                        <ModelSelector
+                          provider={a.provider}
+                          model={a.model}
+                          models={models}
+                          disabled={busy}
+                          onChange={(p, m) => changeModel(a.name, p, m)}
+                        />
+                        {a.model?.startsWith('deepseek-v4') && (
+                          <ThinkingSelector
+                            thinking={a.params.thinking}
+                            effort={a.params.reasoning_effort}
+                            disabled={busy}
+                            onChange={(thinking, reasoning_effort) =>
+                              changeParams(a.name, { thinking, reasoning_effort })}
+                          />
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
@@ -506,6 +518,55 @@ function ModelSelector({
           <option key={opt} value={opt}>{opt.toUpperCase()}</option>
         ))}
       </select>
+    </div>
+  )
+}
+
+// Selector del MOTOR DE SEÑAL del agente: LLM (genera con el modelo) o Determinista
+// (trend_state, sin LLM — el edge validado en backtest, coste $0). En determinista
+// muestra el selector de TIMEFRAME (D1 = perfil diario). Ambos se aplican en caliente
+// (POST /api/agents/<name>/params). El backend valida y reajusta la cadencia de entrada.
+const SIGNAL_TIMEFRAMES = ['M15', 'M30', 'H1', 'H4', 'D1', 'W1']
+
+function SignalSelector({
+  mode, timeframe, disabled, onModeChange, onTimeframeChange,
+}: {
+  mode?: string
+  timeframe?: string
+  disabled: boolean
+  onModeChange: (mode: string) => void
+  onTimeframeChange: (timeframe: string) => void
+}) {
+  const m = mode || 'llm'
+  return (
+    <div className="space-y-1">
+      <div>
+        <label className="text-xs text-gray-500">Señal</label>
+        <select
+          value={m}
+          disabled={disabled}
+          title="LLM genera con el modelo; Determinista usa trend_state (sin LLM, el edge validado en backtest)"
+          onChange={e => onModeChange(e.target.value)}
+          className="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 disabled:opacity-50"
+        >
+          <option value="llm">LLM</option>
+          <option value="deterministic">Determinista (sin LLM)</option>
+        </select>
+      </div>
+      {m === 'deterministic' && (
+        <div>
+          <label className="text-xs text-gray-500">Timeframe</label>
+          <select
+            value={timeframe || 'H1'}
+            disabled={disabled}
+            title="Timeframe base del análisis determinista (D1 = perfil diario validado)"
+            onChange={e => onTimeframeChange(e.target.value)}
+            className="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-cyan-200 disabled:opacity-50"
+          >
+            {SIGNAL_TIMEFRAMES.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+          </select>
+        </div>
+      )}
     </div>
   )
 }

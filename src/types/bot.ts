@@ -112,6 +112,13 @@ export interface AgentParams {
   // los modelos híbridos deepseek-v4-*. "auto" sigue el ajuste global.
   thinking?: 'auto' | 'enabled' | 'disabled'
   reasoning_effort?: '' | 'high' | 'max'
+  // Motor de señal: "llm" (genera con el LLM) o "deterministic" (trend_state, sin
+  // LLM — el edge validado en backtest). timeframe base del análisis (H1 default,
+  // D1 para el perfil diario) + el de contexto. Editables en caliente.
+  signal_mode?: 'llm' | 'deterministic'
+  timeframe?: 'M15' | 'M30' | 'H1' | 'H4' | 'D1' | 'W1'
+  higher_timeframe?: string
+  det_min_score?: number
 }
 
 export interface AgentInfo {
@@ -224,6 +231,8 @@ export interface Coordination {
 
 export interface CoordinatorOverview {
   enabled: boolean
+  // "deterministic" = mesa sin LLM (solo RiskBook + guardias); "llm" = CoordinatorAgent.
+  mode?: 'deterministic' | 'llm'
   provider?: string
   model?: string
   // Nota de dirección activa (instrucción del responsable que la mesa pondera).
